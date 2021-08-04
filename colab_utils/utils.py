@@ -74,8 +74,8 @@ def imshow(img,li,title=""):
     img = img / 2 + 0.5     # unnormalize
     img = torch.clamp(img, min=0., max=1.)
     npimg = img.numpy()
-    li.append(Image.fromarray(npimg))
     plt.imshow(np.transpose(npimg, (1, 2, 0)))
+    li.append(Image.fromarray(np.transpose(npimg, (1, 2, 0))))
     plt.title(title)
     plt.show()
 
