@@ -10,7 +10,7 @@ import numpy as np
 from PIL import Image
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-
+from torchvideo.tools import convert_to_clip
 sys.path.append("../")
 
 
@@ -116,3 +116,4 @@ def SDEditing(betas, logvar, model, name, sample_step, total_noise_levels, n=4):
 
             x0[:, (mask != 1.)] = x[:, (mask != 1.)]
             imshow(x,li)
+    convert_to_clip(li, fps=30, ndarray_format="THWC").write_videofile(f'Showing {name} change.mp4')
