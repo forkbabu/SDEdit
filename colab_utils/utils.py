@@ -7,9 +7,10 @@ import os
 import yaml
 import sys
 import numpy as np
+from PIL import Image
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-
+from torchvideo.tools import convert_to_clip
 sys.path.append("../")
 
 
@@ -66,7 +67,7 @@ def load_model(dataset, category, file):
     return model, betas, num_timesteps, logvar
 
 
-def imshow(img, title=""):
+def imshow(img,li,title=""):
     img = img.to("cpu")
     img = img.permute(1, 2, 0, 3)
     img = img.reshape(img.shape[0], img.shape[1], -1)
@@ -74,11 +75,14 @@ def imshow(img, title=""):
     img = torch.clamp(img, min=0., max=1.)
     npimg = img.numpy()
     plt.imshow(np.transpose(npimg, (1, 2, 0)))
+    li.append(Image.fromarray(np.transpose(npimg, (1, 2, 0))))
     plt.title(title)
     plt.show()
 
 
 def SDEditing(betas, logvar, model, name, sample_step, total_noise_levels, n=4):
+    li = [] 
+    print("video pil list created")
     print("Start sampling")
 
     with torch.no_grad():
@@ -89,13 +93,13 @@ def SDEditing(betas, logvar, model, name, sample_step, total_noise_levels, n=4):
         img = img.repeat(n, 1, 1, 1)
         x0 = img
         x0 = (x0 - 0.5) * 2.
-        imshow(x0, title="Initial input")
+        imshow(x0,li, title="Initial input")
 
         for it in range(sample_step):
             e = torch.randn_like(x0)
             a = (1 - betas).cumprod(dim=0).to(device)
             x = x0 * a[total_noise_levels - 1].sqrt() + e * (1.0 - a[total_noise_levels - 1]).sqrt()
-            imshow(x, title="Perturb with SDE")
+            imshow(x,li,title="Perturb with SDE")
 
             with tqdm(total=total_noise_levels, desc="Iteration {}".format(it)) as progress_bar:
                 for i in reversed(range(total_noise_levels)):
@@ -107,8 +111,9 @@ def SDEditing(betas, logvar, model, name, sample_step, total_noise_levels, n=4):
                     x[:, (mask != 1.)] = x_[:, (mask != 1.)]
                     # added intermediate step vis
                     if (i - 99) % 100 == 0:
-                        imshow(x, title="Iteration {}, t={}".format(it, i))
+                        imshow(x,li, title="Iteration {}, t={}".format(it, i))
                     progress_bar.update(1)
 
             x0[:, (mask != 1.)] = x[:, (mask != 1.)]
-            imshow(x)
+            imshow(x,li)
+    convert_to_clip(li, fps=30, ndarray_format="THWC").write_videofile(f'Showing {name} change.mp4')
